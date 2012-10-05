@@ -1,0 +1,53 @@
+
+###############################################################################
+
+CC		= gcc
+LD		= ld
+AR		= ar
+RANLIB		= ranlib
+
+CFLAGS		= -g -fPIC
+ARFLAGS		= rc
+
+###############################################################################
+
+TMP		= .lib
+
+OBJSNAMES	= core.o string.o
+SHARED		= $(TMP)/libdisasm.so
+
+TARGET		= $(TMP)/disasm
+
+OBJS		= $(addprefix $(TMP)/, $(OBJSNAMES))
+
+###############################################################################
+
+.PHONY: all shared sample clean isdir
+
+all: isdir shared sample
+
+sample:
+
+		if [ -f main.c ]; then $(CC) $(TFLAGS) -L.lib -o $(TARGET) main.c -ldisasm; fi
+
+
+shared: $(OBJS)
+
+		$(CC) -shared -o $(SHARED) $(OBJS)
+
+###############################################################################
+
+$(TMP)/%.o: %.c
+
+		$(CC) -c $(CFLAGS) -o $@ $<
+
+###############################################################################
+
+isdir:
+
+		@if [ ! -d $(TMP) ]; then ( mkdir $(TMP) ); fi
+
+clean:
+
+		rm -f $(OBJS) $(TARGET) $(SHARED)
+		rmdir $(TMP)

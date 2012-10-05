@@ -1,0 +1,6 @@
+libdisasm - x86 disassembly library
+
+This library is used in kernel level debugger of Lotos operating system.
+Library is distributed with main.c - simple disassembly program.
+
+P.S. This is old project and not supported at the moment.

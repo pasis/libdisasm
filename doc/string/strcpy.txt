@@ -1,0 +1,129 @@
+===============================================================================
+
+| void strcpy(char *dest, char *src) {
+|
+|	do {
+|		*dest++ = *src++;
+|	} while ( *src );
+|
+| }
+
+-------------------------------------------------------------------------------
+
+ без оптимизации компилируется в:
+
+.text:0804843C strcpy          proc near               ; CODE XREF: disasm+12F
+.text:0804843C                                         ; disasm+192
+.text:0804843C
+.text:0804843C arg_0           = dword ptr  8
+.text:0804843C arg_4           = dword ptr  0Ch
+.text:0804843C
+.text:0804843C                 push    ebp
+.text:0804843D                 mov     ebp, esp
+.text:0804843F
+.text:0804843F loc_804843F:                            ; CODE XREF: strcpy+21
+.text:0804843F                 mov     eax, [ebp+arg_0]
+.text:08048442                 mov     ecx, eax
+.text:08048444                 mov     eax, [ebp+arg_4]
+.text:08048447                 mov     edx, eax
+.text:08048449                 lea     eax, [ebp+arg_4]
+.text:0804844C                 inc     dword ptr [eax]
+.text:0804844E                 mov     al, [edx]
+.text:08048450                 mov     [ecx], al
+.text:08048452                 inc     [ebp+arg_0]
+.text:08048455                 mov     eax, [ebp+arg_4]
+.text:08048458                 cmp     byte ptr [eax], 0
+.text:0804845B                 jz      short loc_804845F
+.text:0804845D                 jmp     short loc_804843F
+.text:0804845F ; ---------------------------------------------------------------------------
+.text:0804845F
+.text:0804845F loc_804845F:                            ; CODE XREF: strcpy+1F
+.text:0804845F                 pop     ebp
+.text:08048460                 retn
+.text:08048460 strcpy          endp
+
+-------------------------------------------------------------------------------
+
+ с оптимизацией -O2:
+
+.text:08048420 strcpy          proc near               ; CODE XREF: disasm+291
+.text:08048420
+.text:08048420 arg_0           = dword ptr  8
+.text:08048420 arg_4           = dword ptr  0Ch
+.text:08048420
+.text:08048420                 push    ebp
+.text:08048421                 mov     ebp, esp
+.text:08048423                 mov     edx, [ebp+arg_4]
+.text:08048426                 mov     ecx, [ebp+arg_0]
+.text:08048429                 mov     al, [edx]
+.text:0804842B                 nop                     ; следуещте две строчки чтобы выровнять
+.text:0804842C                 lea     esi, [esi+0]    ;  loc_8048430 ?
+.text:08048430
+.text:08048430 loc_8048430:                            ; CODE XREF: strcpy+18
+.text:08048430                 inc     edx
+.text:08048431                 mov     [ecx], al
+.text:08048433                 mov     al, [edx]
+.text:08048435                 inc     ecx
+.text:08048436                 test    al, al
+.text:08048438                 jnz     short loc_8048430
+.text:0804843A                 pop     ebp
+.text:0804843B                 retn
+.text:0804843B strcpy          endp
+
+===============================================================================
+
+  А вообще-то код не совсем правильный, ведь последний нулевой символ строки
+ src не будет скопирован в строку dest. Точнее будет так:
+
+| void strcpy(char *dest, char *src) {
+|
+|	while ( *dest++ = *src++ );
+|
+| }
+
+-------------------------------------------------------------------------------
+
+ этот код с оптимизацией -O2:
+
+.text:08048420 strcpy          proc near               ; CODE XREF: disasm+291
+.text:08048420
+.text:08048420 arg_0           = dword ptr  8
+.text:08048420 arg_4           = dword ptr  0Ch
+.text:08048420
+.text:08048420                 push    ebp
+.text:08048421                 mov     ebp, esp
+.text:08048423                 mov     ecx, [ebp+arg_0]
+.text:08048426                 mov     edx, [ebp+arg_4]
+.text:08048429                 lea     esi, [esi+0]    ; опять выравнивание :)
+.text:08048430
+.text:08048430 loc_8048430:                            ; CODE XREF: strcpy+18
+.text:08048430                 mov     al, [edx]
+.text:08048432                 mov     [ecx], al
+.text:08048434                 inc     edx
+.text:08048435                 inc     ecx
+.text:08048436                 test    al, al
+.text:08048438                 jnz     short loc_8048430
+.text:0804843A                 pop     ebp
+.text:0804843B                 retn
+.text:0804843B strcpy          endp
+
+-------------------------------------------------------------------------------
+
+ возможное решение на asm:
+
+; void strcpy(char *dest, char *src)
+strcpy:
+
+    mov   edi, [esp + 4]
+    mov   esi, [esp + 8]
+    mov   ax, ds
+    mov   es, ax
+
+.cycle:
+
+    lodsb                      ; возможно заменить на movsb, но как тогда
+    stosb                      ;  быстро проверить текущий символ?
+    test  al, al
+    jnz   .cycle
+
+   ret
